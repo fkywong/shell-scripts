@@ -16,7 +16,8 @@ Usage
 
 * f: Force
 
-	Forces \`update-alternatives' actions; otherwise no system changes will be made (default not set)   
+	Forces \`update-alternatives' actions; otherwise no system changes will be made (default not set)
+
 	* Mutually exclusive with the -n flag
 	* Verbose flag will still give meaningful output
 
@@ -26,13 +27,15 @@ Usage
 
 * n: Non-root only
 
-	Only non-root actions are performed (default not set)   
+	Only non-root actions are performed (default not set)
+
 	* Mutually exclusive with the -f flag
 	* Verbose flag will give output based on a Java path in '/tmp'
 
 * v: Verbose
 
-	Enables verbose output   
+	Enables verbose output
+
 	* Use more v's for extra verbose output
 
 install _TARBALL_
@@ -45,7 +48,7 @@ install _TARBALL_
 	* Can be used to install the first alternative or any thereafter
 	* Latest installed Java has highest priority order
 
-set [_DIRECTORY_|_auto_]
+set [_DIRECTORY_\|_auto_]
 
 * Sets the Java components exposed to the system using the specified root directory of the Java installation
 	* Providing no arguments will return a list of possible directories to choose from
