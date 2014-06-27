@@ -1,0 +1,157 @@
+#!/bin/bash
+
+function elapsedTime (){
+
+# Allows script to run even on OS X
+	function osxCompatible (){
+		function grep(){
+			ggrep "${@}"
+		}
+
+		function sed(){
+			gsed "${@}"
+		}
+
+		function date(){
+			gdate "${@}"
+		}
+
+	if [ "$( uname -s )" == "Darwin" ] && grep -V | grep -q 'BSD'; then
+		if which ggrep gsed gdate &> /dev/null; then
+			printf "[WARN] elapsedTime: Exporting ggrep, gsed, and gdate for OS X compatibility\n\n"
+			export -f grep
+			export -f sed
+			export -f date
+		else
+			printf "GNU grep, sed, and date are required on OS X\nInstall via 'brew install gnu-sed grep coreutils'" 1>&2
+			exit 1
+		fi
+	fi
+	}
+
+# Help Prompt
+	function getHelp (){
+		local UNDERLINE=$( tput smul )
+		local NOUNDERLINE=$( tput rmul )
+
+		printf "${FUNCNAME[$(( ${#FUNCNAME[@]} - 2 ))]} [-h] [-s] "
+		printf "${UNDERLINE}TIME_A${NOUNDERLINE} ${UNDERLINE}TIME_B${NOUNDERLINE}\n"
+		printf "   -h: Displays this help message\n"
+		printf "   -s: Displays the function source code\n"
+		printf "\n   ${UNDERLINE}TIME_A/B${NOUNDERLINE}:\n"
+		printf "      (#[s|m|h|d|w] )+\n"
+		printf "      [ \`date' acceptable format ]\n"
+		printf "\n   Mixing formats is not allowed!\n"
+		printf "\n   Use quotes to surround inputs with whitespace!\n"
+	}
+
+# Calculates the remainder
+	function remainder (){
+		DIVIDEND=${1}
+		DIVISOR=${2}
+
+		if [ -z "${DIVIDEND}" -o -z "${DIVISOR}" ]; then
+			echo "0"
+			return 1
+		elif [ ${DIVISOR} -eq 0 ]; then
+			printf "${FUNCNAME}: divide by 0\n" 1>&2
+			return 1
+		else
+			echo "$(( ${DIVIDEND}%${DIVISOR} ))"
+			return 0
+		fi
+	}
+
+# Calculates the quotient
+	function quotient (){
+		DIVIDEND=${1}
+		DIVISOR=${2}
+
+		if [ -z "${DIVIDEND}" -o -z "${DIVISOR}" ]; then
+			echo "0"
+			return 1
+		elif [ ${DIVISOR} -eq 0 ]; then
+			printf "${FUNCNAME}: divide by 0\n" 1>&2
+			return 1
+		else
+			echo "$(( (${DIVIDEND} - $( remainder ${DIVIDEND} ${DIVISOR} )) / ${DIVISOR} ))"
+			return 0
+		fi
+	}
+
+# Checks the integrity of inputs coming in and gets arguments
+	function getargs (){
+		while getopts ":hs" opt; do
+			case $opt in
+				h)
+					getHelp
+					exit 0;;
+				s)
+					set | sed -n '/elapsedTime\ ()/,/^}/p' | sed '1 s/\(.*\)/function\ \1/'
+					exit 0;;
+				\?)
+					exec >&2
+					echo "Unknown flag -$OPTARG"
+					exit 1;;
+			esac
+		done
+	}
+
+# Casts inputs to seconds if necessary
+	function inputCast (){
+		if ( echo "${1}" | grep -q '[-:]\+' ) && ( echo "${2}" | grep -q '[-:]\+' ); then
+			START=$( date -d"${1}" +%s || return 1 )
+			END=$( date -d"${2}" +%s || return 1 )
+			return 0
+		else
+		#elif ( echo "${1}" | grep -q -e '[ ]\+' -e '^[0-9]*[smhdw]\?[[:alpha:]]*$' ) && ( echo "${2}" | grep -q -e '[ ]\+' -e '^[0-9]*[smhdw]\?[[:alpha:]]*$' ); then
+			START=$( echo "${1}" | sed -e 's/[[:space:]]\+/+/g' -e 's/w[[:alpha:]]*/*7*24*60*60/' -e 's/d[[:alpha:]]*/*24*60*60/' -e 's/h[[:alpha:]]*/*60*60/' -e 's/m[[:alpha:]]*/*60/' -e 's/s[[:alpha:]]*//' | bc 2>&1 )
+			END=$( echo "${2}" | sed -e 's/[[:space:]]\+/+/g' -e 's/w[[:alpha:]]*/*7*24*60*60/' -e 's/d[[:alpha:]]*/*24*60*60/' -e 's/h[[:alpha:]]*/*60*60/' -e 's/m[[:alpha:]]*/*60/' -e 's/s[[:alpha:]]*//' | bc 2>&1 )
+			echo ${START} | grep -q '^[[:digit:]]\+$' && echo ${END} | grep -q '^[[:digit:]]\+$' && return 0
+		fi
+		printf "${FUNCNAME[$(( ${#FUNCNAME[@]} - 2 ))]}: invalid input format and/or syntax\n" 1>&2
+		return 1
+	}
+
+# Calculates the elapsed time in human-readable form
+	function calculate (){
+		ELAPSED=$( echo $(( ${END} - ${START} )) | sed 's/-//' )
+		SECS=$( remainder ${ELAPSED} 60 | awk '{printf "%02s", $0}' )
+		MINS=$( quotient ${ELAPSED} 60 )
+		HOURS=$( quotient ${MINS} 60 )
+		MINS=$( remainder ${MINS} 60 | awk '{printf "%02s", $0}' )
+		DAYS=$( quotient ${HOURS} 24 )
+		HOURS=$( remainder ${HOURS} 24 | awk '{printf "%02s", $0}' )
+		WEEKS=$( quotient ${DAYS} 7 )
+		DAYS=$( remainder ${DAYS} 7 | awk '{printf "%s", $0}' )
+	}
+
+	getargs "${@}"
+	osxCompatible
+
+	if [ ${#} -ne 2 -o -z "${1}" -o -z "${2}" ]; then
+		printf "${FUNCNAME[$(( ${#FUNCNAME[@]} - 2 ))]}: invalid number of arguments\n" 1>&2
+		exit 1
+	fi
+
+	set -e
+	inputCast "${@}"
+	calculate "${@}"
+	set +e
+
+	OUTPUT=""
+	[ ${WEEKS} -ne 0 ] && OUTPUT+="${WEEKS}w "
+	[ ${DAYS} -ne 0 ] && OUTPUT+="${DAYS}d "
+	[ ${HOURS} -ne 0 ] && OUTPUT+="${HOURS}h "
+	[ ${MINS} -ne 0 ] && OUTPUT+="${MINS}m "
+	[ ${SECS} -ne 0 ] && OUTPUT+="${SECS}s"
+
+	if [ -n "${OUTPUT}" ]; then
+		printf "${OUTPUT}\n" || return 1
+	else
+		printf "${SECS}s\n" || return 1
+	fi
+	return 0
+}
+
+elapsedTime "${@}"

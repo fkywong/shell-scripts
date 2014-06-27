@@ -1,0 +1,94 @@
+#!/bin/bash
+
+HOSTLIST="hh- porcupine-"
+FILELIST="~/.bashrc ~/.vimrc ~/.vim/"
+AUTOLOAD_RC_FILE=false
+RC_FILE_NAME=".bashrc"
+CLEAN_ON_EXIT=false
+
+########################################################
+# ANY MODIFICATIONS AFTER THIS POINT ARE NOT SUPPORTED #
+########################################################
+
+function error() {
+   printf "ERROR: $@" >&2
+}
+
+function warn() {
+   printf "WARN: $@"
+}
+
+function info() {
+   printf "INFO: $@"
+}
+
+function expectFile() {
+   if which expect &> /dev/null; then
+      printf "Generating temporary expect file..."
+      printf "#!/usr/bin/expect -f\nlog_user 0\nspawn ssh $@\nsend \"source ~/$USER/$RCFILE\\\n\"\ninteract" > .tmp.$$ && chmod u+x .tmp.$$
+      if [ $? -eq 0 ]; then
+	 printf "Success!\n\n"
+	 ./.tmp.$$
+	 printf "\n"
+	 removeExpectFile
+      else
+         echo -e "Failure!\n\n"
+	 removeExpectFile
+         error "Falling back to regular ssh mode\n"
+	 regularSSH $@
+      fi
+   fi
+}
+
+function removeExpectFile() {
+   if rm .tmp.$$ &> /dev/null; then
+      info "Cleaned up temporary expect file\n"
+   else
+      warn "Could not remove temporary expect file...Please manually remove '$( dirname $0 )/.tmp.$$'\n"
+   fi
+}
+
+function regularSSH() {
+   \ssh $@
+   exit $?
+}
+
+USER=$( whoami )
+REGEX=$( echo $HOSTLIST | sed 's<\ <\|<g' )
+SSHCREDS=$( echo $@ | grep -E -ow -e "[A-Za-z0-9@]*($REGEX)[-A-Za-z0-9.]*" )
+RCFILE=$( basename $RC_FILE_NAME )
+
+if [ -n "$SSHCREDS" -a -n "$HOSTLIST" ] && ssh -o PasswordAuthentication=no -o ConnectTimeout=3 -nq $SSHCREDS &> /dev/null; then
+   for i in $FILELIST; do
+      if [ -e $( eval "echo $i" ) ]; then
+	 RMTFILELIST+="$( basename $i ) "
+      else
+	 warn "File '$i' does not exist...Check your FILELIST variable in '$0'\n"
+	 info "Continuing on without file '$i'\n\n"
+	 FILELIST=$( echo $FILELIST | sed "s<$i<<" )
+      fi
+   done
+
+   if [ -z "$RCFILE" ]; then
+      warn "You haven't specified an runtime config file to be run...check your RC_FILE_NAME variable in '$0'\n\n"
+   elif ! [[ "$FILELIST" =~ "$RCFILE" ]]; then
+      warn "The specified runtime config file will not be run...check that your FILELIST variable in '$0' contains the runtime config file\n\n"
+   fi
+
+   printf "\nCopying a portion of the environment over..."
+   ssh -q $SSHCREDS "mkdir -p ~/$USER/" && eval "scp -rq $FILELIST $SSHCREDS:~/$USER/"
+   if [ $? -eq 0 ]; then
+      printf "Success!\n"
+      $AUTOLOAD_RC_FILE && expectFile $@
+      ! $AUTOLOAD_RC_FILE && printf "Manually source the RC file with the command: \"source ~/$USER/$RCFILE\"\n\n" && ssh $@
+      $CLEAN_ON_EXIT && info "Cleaning up remote files based on your FILELIST variable..." && ssh -q $SSHCREDS "cd ~/$USER/ && rm -rf $RMTFILELIST" && printf "Success!\n" && exit 0
+      $CLEAN_ON_EXIT && printf "Failure!\n" && exit 1
+      exit 0
+   else
+      printf "Failure!\n"
+      error "Falling back to regular ssh mode\n"
+      regularSSH $@
+   fi
+else
+   regularSSH $@
+fi

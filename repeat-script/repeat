@@ -1,0 +1,51 @@
+#!/bin/bash
+
+function repeat() {
+
+# Help Prompt
+	function getHelp (){
+		local UNDERLINE=$( tput smul )
+		local NOUNDERLINE=$( tput rmul )
+
+		printf "${FUNCNAME[$(( ${#FUNCNAME[@]} - 2 ))]} [-h] [-s] "
+		printf "${UNDERLINE}INTEGER${NOUNDERLINE} ${UNDERLINE}COMMAND${NOUNDERLINE}\n"
+		printf "   -h: Displays this help message\n"
+		printf "   -s: Displays the function source code\n"
+		printf "\n   ${UNDERLINE}INTEGER${NOUNDERLINE}: "
+		printf "# representing how many times to repeat ${UNDERLINE}COMMAND${NOUNDERLINE}\n"
+		printf "   ${UNDERLINE}COMMAND${NOUNDERLINE}: "
+		printf "The shell command(s) being repeated\n"
+	}
+
+# Checks the integrity of inputs coming in and gets arguments
+	function getargs (){
+		while getopts ":hs" opt; do
+			case $opt in
+				h)
+					getHelp
+					exit 0;;
+				s)
+					set | sed -n '/repeat\ ()/,/^}/p' | sed '1 s/\(.*\)/function\ \1/'
+					exit 0;;
+				\?)
+					exec >&2
+					echo "Unknown flag -$OPTARG"
+					exit 1;;
+			esac
+		done
+	}
+
+	getargs "${@}"
+
+if [[ "${1}" =~ ^[0-9]+$ ]]; then
+	for (( i=1; i <= ${1}; i++ )); do
+		eval $( echo "${*}" | sed "s/^${1}\ //" ) || return 1
+	done
+	return ${?}
+else
+	printf "Usage: $( getHelp | head -n1 )\n"
+	return 1
+fi
+}
+
+repeat "${@}"
