@@ -36,7 +36,7 @@ Usage
 
 	Enables verbose output
 
-	* Use more v's for extra verbose output
+	* Use two v's for extra verbose output
 
 install _TARBALL_
 
@@ -48,7 +48,7 @@ install _TARBALL_
 	* Can be used to install the first alternative or any thereafter
 	* Latest installed Java has highest priority order
 
-set [_DIRECTORY_\|_auto_]
+set [_DIRECTORY|auto_]
 
 * Sets the Java components exposed to the system using the specified root directory of the Java installation
 	* Providing no arguments will return a list of possible directories to choose from
