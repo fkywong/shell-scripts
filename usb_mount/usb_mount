@@ -1,0 +1,65 @@
+#!/bin/zsh
+
+UNDERLINE=$( tput smul )
+NOUNDERLINE=$( tput rmul )
+[[ ${1} =~ '^--?h' ]] && printf "Usage: $( basename ${0} ) ${UNDERLINE}USB_PARTITION${NOUNDERLINE} [${UNDERLINE}MOUNT_POINT${NOUNDERLINE}]\n" && exit 0
+
+# This section does general checks
+[[ "$( sudo whoami )" != root ]] && printf "ERROR: Insufficient privileges!" >&2 && exit 1
+! which blkid lsblk mktemp &> /dev/null && printf "ERROR: Tools 'blkid', 'lsblk', and/or 'mktemp' not found\n" >&2 && exit 1
+[[ ${#} -gt 2 ]] && printf "ERROR: Invalid number of arguments\n\nUsage:\t${0} SOURCE_DEVICE [MOUNT_POINT]\n" >&2 && exit 1
+[[ ${#} -lt 1 ]] && printf "No source disk specified!\nChoose one from the table below:\n\n" && lsblk -o NAME,SIZE && exit 0
+SRC_PT=$( echo "${1}" | sed 's;/$;;')
+MNT_PT=${2}
+
+# This section checks for a valid first argument
+if [[ "${SRC_PT}" =~ '/dev/sd[a-z]+[0-9]+$' ]]; then
+	if sudo blkid ${SRC_PT} &> /dev/null; then
+		DEST=$( lsblk -n -o MOUNTPOINT ${SRC_PT} )
+		if [[ ! -z "${DEST}" ]]; then
+			printf "ERROR: Partition '${SRC_PT}' is already mounted at '${DEST}'!\n" >&2
+			exit 1
+		else
+		fi
+	else
+		printf "ERROR: Partition '${SRC_PT}' doesn't exist!\n"
+		exit 1
+	fi
+elif [[ "${SRC_PT}" =~ '/dev/sd[a-z]+$' ]]; then
+	printf "ERROR: No partition was specified for source device '${SRC_PT}'\n" >&2
+	exit 1
+else
+	printf "ERROR: Invalid source disk '${SRC_PT}' (not a Linux disk, e.g. /dev/sdb)\n" >&2
+	exit 1
+fi
+
+# This section checks/sets a valid second argument
+if [[ -z "${MNT_PT}" ]]; then
+	MNT_PT=$( sudo mktemp -d --tmpdir=/media usb.XXXXXX )
+elif [[ ! -d "${MNT_PT}" ]]; then
+	mkdir -p ${MNT_PT} || { printf "ERROR: Could not create folder '${MNT_PT}'\n" >&2; exit 1 }
+elif [[ -d "${MNT_PT}" && ! -z "$( ls -A "${MNT_PT}" )" ]]; then
+	printf "ERROR: Existing files in '${MNT_PT}' will be clobbered during mount!\n" >&2
+	exit 1
+else
+fi
+
+# This section allows different mounting options based on the format type of the partition
+TYPE=$( sudo blkid -o value -s TYPE ${SRC_PT} )
+case ${TYPE} in
+	vfat)
+		local CMD="sudo mount -t ${TYPE} -o uid=$( id -u ),gid=$( id -g ),umask=0055 ${SRC_PT} ${MNT_PT}"
+		;;
+	*)
+		local CMD="sudo mount -t autofs ${SRC_PT} ${MNT_PT}"
+		;;
+esac
+
+eval ${CMD}
+if [[ ${?} -eq 0 ]]; then
+	printf "'${SRC_PT}' successfully mounted at '${MNT_PT}'\n"
+	exit 0
+else
+	printf "Mounting failed with the command \`${CMD}'.\n" >&2
+	exit 1
+fi
