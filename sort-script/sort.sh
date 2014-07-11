@@ -4,6 +4,39 @@ INTERACTIVE=false
 VERBOSE=false
 YES=false
 
+function osxCompatible (){
+	if [ "$( uname -s )" == "Darwin" ] && grep -V | grep -q 'BSD'; then
+		function grep(){
+			ggrep "${@}"
+		}
+
+		function readlink(){
+			greadlink "${@}"
+		}
+
+		function stat(){
+			gstat "${@}"
+		}
+
+		function date(){
+			gdate "${@}"
+		}
+
+		if which ggrep greadlink gstat gdate &> /dev/null; then
+			printf "[WARN] $( basename ${0} ): Exporting ggrep, gstat, and gdate for OS X compatibility\n\n"
+			export -f grep || { printf "[ERROR] $( basename ${0} ): Couldn't export grep\n\tRefusing to continue..." 1>&2; return 1 }
+			export -f readlink || { printf "[ERROR] $( basename ${0} ): Couldn't export readlink\n\tRefusing to continue..." 1>&2; return 1 }
+			export -f stat || { printf "[ERROR] $( basename ${0} ): Couldn't export stat\n\tRefusing to continue..." 1>&2; return 1 }
+			export -f date || { printf "[ERROR] $( basename ${0} ): Couldn't export date\n\tRefusing to continue..." 1>&2; return 1 }
+		else
+			printf "GNU utilities are required on OS X\nInstall via 'brew install coreutils'" 1>&2
+			return 1
+		fi
+	else
+		return 0
+	fi
+}
+
 function getHelp (){
 	local UNDERLINE=$( tput smul )
 	local NOUNDERLINE=$( tput rmul )
@@ -57,14 +90,17 @@ function yesno(){
 
 function blacklistCheck(){
 	if [ -n "${BLACKLIST}" -a ! -f "${BLACKLIST}" ]; then
-		${VERBOSE} && printf "Blacklist file not found! ($( greadlink -f ${BLACKLIST} ))\n"
+		${VERBOSE} && printf "Blacklist file not found! ($( readlink -f ${BLACKLIST} ))\n"
 	elif [ -z "${BLACKLIST}" ]; then
-		BLACKLIST=$( dirname $(greadlink -f ${0}) )/blacklist
+		BLACKLIST=$( dirname $(readlink -f ${0}) )/blacklist
 	else
 		:
 	fi
-	${VERBOSE} && printf "Blacklist location: '$( greadlink -f ${BLACKLIST} )'\n\n"
+	${VERBOSE} && printf "Blacklist location: '$( readlink -f ${BLACKLIST} )'\n\n"
 }
+
+# Check & set for OSX compatibility
+osxCompatible
 
 # Initial conditions
 ITEMS_MOVED=0
@@ -87,22 +123,21 @@ for FILE in *; do
 		${SKIP} && continue
 	fi
 
-	${INTERACTIVE} && yesno "Do you want to sort file '${FILE}'? (y/n)\t" && continue
-
 # Ensure directory name is not a year (e.g. 2013, 2014, etc.)
 	if [ -f ${FILE} ] || ( [ -d ${FILE} ] && echo "${FILE}" | grep -qv "^[[:digit:]]\{4\}$" ); then
-		FILE_DATE=$( gstat -c "%Y" ${FILE} )
-		DAY_OF_WEEK=$( gdate -d @${FILE_DATE} +%u )
-		YEAR=$( gdate -d @${FILE_DATE} +%Y )
-		BEGIN_OF_WEEK=$( gdate -d @$( echo "${FILE_DATE}-(${DAY_OF_WEEK}-1)*24*60*60" | bc ) +"week%W_%d%b" )
-		BEGIN_YEAR=$( gdate -d @$( echo "${FILE_DATE}-(${DAY_OF_WEEK}-1)*24*60*60" | bc ) +"%Y" )
-		END_OF_WEEK=$( gdate -d @$( echo "${FILE_DATE}+(7-${DAY_OF_WEEK})*24*60*60" | bc ) +"%d%b" )
-		END_YEAR=$( gdate -d @$( echo "${FILE_DATE}+(7-${DAY_OF_WEEK})*24*60*60" | bc ) +"%Y" )
+		${INTERACTIVE} && yesno "Do you want to sort file '${FILE}'? (y/n)\t" && continue
+		FILE_DATE=$( stat -c "%Y" ${FILE} )
+		DAY_OF_WEEK=$( date -d @${FILE_DATE} +%u )
+		YEAR=$( date -d @${FILE_DATE} +%Y )
+		BEGIN_OF_WEEK=$( date -d @$( echo "${FILE_DATE}-(${DAY_OF_WEEK}-1)*24*60*60" | bc ) +"week%W_%d%b" )
+		BEGIN_YEAR=$( date -d @$( echo "${FILE_DATE}-(${DAY_OF_WEEK}-1)*24*60*60" | bc ) +"%Y" )
+		END_OF_WEEK=$( date -d @$( echo "${FILE_DATE}+(7-${DAY_OF_WEEK})*24*60*60" | bc ) +"%d%b" )
+		END_YEAR=$( date -d @$( echo "${FILE_DATE}+(7-${DAY_OF_WEEK})*24*60*60" | bc ) +"%Y" )
 		if [ ${BEGIN_YEAR} -ne ${END_YEAR} ]; then
-	 if [ ${BEGIN_YEAR} -eq ${YEAR} ]; then
-		 END_OF_WEEK="Dec31"
-	 else
-		 BEGIN_OF_WEEK="week00_01Jan"
+			if [ ${BEGIN_YEAR} -eq ${YEAR} ]; then
+				END_OF_WEEK="Dec31"
+			else
+				BEGIN_OF_WEEK="week00_01Jan"
 			fi
 		fi
 		FOLDER_NAME="${YEAR}/${BEGIN_OF_WEEK}-${END_OF_WEEK}"
@@ -113,7 +148,7 @@ for FILE in *; do
 		ITEMS_MOVED=$(( ${ITEMS_MOVED} + 1 ))
 	fi
 done
-${VERBOSE} && [ ${SKIPPED_LIST} ] && printf "\nSkipped files: $( echo "${SKIPPED_LIST}" | sed 's/,\ $//' )\n"
+${VERBOSE} && [ -n "${SKIPPED_LIST}" ] && printf "\nSkipped files: $( echo "${SKIPPED_LIST}" | sed 's/,\ $//' )\n"
 echo "Items moved: ${ITEMS_MOVED}"
 ${VERBOSE} && [ ${ITEMS_MOVED} -ne 0 ] && printf "Moved files: $( echo "${MOVED_LIST}" | sed 's/,\ $//' )\n"
 exit 0
