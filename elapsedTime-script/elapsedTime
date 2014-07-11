@@ -4,6 +4,7 @@ function elapsedTime (){
 
 # Allows script to run even on OS X
 	function osxCompatible (){
+	if [ "$( uname -s )" == "Darwin" ] && grep -V | grep -q 'BSD'; then
 		function grep(){
 			ggrep "${@}"
 		}
@@ -15,8 +16,6 @@ function elapsedTime (){
 		function date(){
 			gdate "${@}"
 		}
-
-	if [ "$( uname -s )" == "Darwin" ] && grep -V | grep -q 'BSD'; then
 		if which ggrep gsed gdate &> /dev/null; then
 			printf "[WARN] elapsedTime: Exporting ggrep, gsed, and gdate for OS X compatibility\n\n"
 			export -f grep
