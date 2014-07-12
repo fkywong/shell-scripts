@@ -1,10 +1,10 @@
 # This blacklist handles basic Linux-style regex
 # Ex: foo* will match foo, foo.bar, foobar
 # Ex: *foo will match foo, bar.foo, barfoo
-simulateddata*
+simulateddata*	# git repro
 webapi
 mbeancli*
 pfutils*
 *.class
 *.java
-run2
+run2 # crap stuff

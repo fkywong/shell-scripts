@@ -8,7 +8,7 @@ Felix Wong <fwong@palantir.com>
 
 Description
 ===
-Sorts files in the current directory into a ./year/week#/ hierarchy based on last modification times
+Sorts files in the current directory into a ./{year}/{week #}/ hierarchy based on last modification times
 
 Usage
 ===
