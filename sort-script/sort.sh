@@ -25,7 +25,7 @@ function osxCompatible(){
 			export -f stat || { printf "[ERROR]\tCouldn't export stat\n\t\tRefusing to continue..." 1>&2; return 1; }
 			export -f date || { printf "[ERROR]\tCouldn't export date\n\t\tRefusing to continue..." 1>&2; return 1; }
 		else
-			printf "GNU utilities are required on OS X\nInstall via 'brew install coreutils'" 1>&2
+			printf "GNU utilities are required on OS X\nInstall via 'brew install grep coreutils'" 1>&2
 			return 1
 		fi
 	else
