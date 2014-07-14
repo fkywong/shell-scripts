@@ -19,11 +19,11 @@ function osxCompatible(){
 			gdate "${@}"
 		}
 		if which ggrep greadlink gstat gdate &> /dev/null; then
-			printf "[WARN] $( basename ${0} ): Exporting ggrep, gstat, and gdate for OS X compatibility\n\n"
-			export -f grep || { printf "[ERROR] $( basename ${0} ): Couldn't export grep\n\tRefusing to continue..." 1>&2; return 1; }
-			export -f readlink || { printf "[ERROR] $( basename ${0} ): Couldn't export readlink\n\tRefusing to continue..." 1>&2; return 1; }
-			export -f stat || { printf "[ERROR] $( basename ${0} ): Couldn't export stat\n\tRefusing to continue..." 1>&2; return 1; }
-			export -f date || { printf "[ERROR] $( basename ${0} ): Couldn't export date\n\tRefusing to continue..." 1>&2; return 1; }
+			printf "[WARN]\tExporting ggrep, gstat, and gdate for OS X compatibility\n\n"
+			export -f grep || { printf "[ERROR]\tCouldn't export grep\n\t\tRefusing to continue..." 1>&2; return 1; }
+			export -f readlink || { printf "[ERROR]\tCouldn't export readlink\n\t\tRefusing to continue..." 1>&2; return 1; }
+			export -f stat || { printf "[ERROR]\tCouldn't export stat\n\t\tRefusing to continue..." 1>&2; return 1; }
+			export -f date || { printf "[ERROR]\tCouldn't export date\n\t\tRefusing to continue..." 1>&2; return 1; }
 		else
 			printf "GNU utilities are required on OS X\nInstall via 'brew install coreutils'" 1>&2
 			return 1
