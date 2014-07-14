@@ -3,30 +3,30 @@
 function elapsedTime (){
 
 # Allows script to run even on OS X
-	function osxCompatible (){
+function osxCompatible(){
 	if [ "$( uname -s )" == "Darwin" ] && grep -V | grep -q 'BSD'; then
 		function grep(){
 			ggrep "${@}"
 		}
-
 		function sed(){
 			gsed "${@}"
 		}
-
 		function date(){
 			gdate "${@}"
 		}
-		if which ggrep gsed gdate &> /dev/null; then
-			printf "[WARN] elapsedTime: Exporting ggrep, gsed, and gdate for OS X compatibility\n\n"
-			export -f grep
-			export -f sed
-			export -f date
+		if which ggrep greadlink gstat gdate &> /dev/null; then
+			printf "[WARN]\tExporting ggrep, gsed, and gdate for OS X compatibility\n\n"
+			export -f grep || { printf "[ERROR]\tCouldn't export grep\n\t\tRefusing to continue..." 1>&2; return 1; }
+			export -f sed || { printf "[ERROR]\tCouldn't export sed\n\t\tRefusing to continue..." 1>&2; return 1; }
+			export -f date || { printf "[ERROR]\tCouldn't export date\n\t\tRefusing to continue..." 1>&2; return 1; }
 		else
-			printf "GNU grep, sed, and date are required on OS X\nInstall via 'brew install gnu-sed grep coreutils'" 1>&2
-			exit 1
+			printf "GNU utilities are required on OS X\nInstall via 'brew install gnu-sed grep coreutils'" 1>&2
+			return 1
 		fi
+	else
+		return 0
 	fi
-	}
+}
 
 # Help Prompt
 	function getHelp (){
