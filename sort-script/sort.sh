@@ -3,6 +3,7 @@
 INTERACTIVE=false
 VERBOSE=0
 YES=false
+DRYRUN=false
 
 function osxCompatible(){
 	if [ "$( uname -s )" == "Darwin" ] && grep -V | grep -q 'BSD'; then
@@ -41,6 +42,7 @@ function getHelp(){
 	printf "Options\n"
 	printf "   -h: Displays this help message\n"
 	printf "   -i: Prompts before sorting every file; overrides -y flag\n"
+	printf "   -n: Prints out what would be sorted, but doesn't do anything\n"
 	printf "   -v: Outputs verbose logging\n"
 	printf "   -y: Assumes yes for sorting files in the current directory\n"
 	printf "\n${UNDERLINE}PATH TO BLACKLIST${NOUNDERLINE}"
@@ -49,13 +51,15 @@ function getHelp(){
 
 function getargs(){
 	local OPTIND
-	while getopts ":hivy" opt; do
+	while getopts ":hinvy" opt; do
 		case ${opt} in
-		i)
-			INTERACTIVE=true;;
 		h)
 			getHelp
 			exit 0;;
+		i)
+			INTERACTIVE=true;;
+		n)
+			DRYRUN=true;;
 		v)
 			(( VERBOSE++ ));;
 		y)
@@ -107,6 +111,8 @@ function createDirectoryStructure(){
 	unset FOLDER_NAME
 	FOLDER_NAME="${YEAR}/${BEGIN_OF_WEEK}-${END_OF_WEEK}"
 
+	( ${DRYRUN} ) && return 0
+
 	if [[ -d ${FOLDER_NAME} ]]; then
 		return 0
 	else
@@ -128,6 +134,9 @@ osxCompatible || exit 1
 getargs "${@}"
 shift $((${?}-1))
 BLACKLIST=${1:-"$( dirname $(readlink -f ${0}) )/blacklist"}
+if [[ "${1}" != "${BLACKLIST}" && -r ./blacklist ]]; then
+	BLACKLIST=./blacklist
+fi
 shift 1
 getargs "${@}"
 
@@ -138,10 +147,16 @@ fi
 
 if [[ -f "${BLACKLIST}" ]]; then
 	declare -a BLACKLIST_ENTRIES=( $( cat ${BLACKLIST} | sed '/^#/d;s/[[:space:]]*#.*//' ) )
+	if [[ "${BLACKLIST}" == "./blacklist" ]]; then
+		[[ ${VERBOSE} -ge 1 ]] && printf "[INFO]\tBlacklisting './blacklist' because it's currently in use\n"
+		BLACKLIST_ENTRIES=("${BLACKLIST_ENTRIES[@]}" "blacklist")
+	fi
 	[[ ${VERBOSE} -ge 1 ]] && printf "[INFO]\tBlacklist location: '$( readlink -f "${BLACKLIST}" )'\n"
 else
 	printf "[WARN]\tBlacklist file '${BLACKLIST}' not found\n"
 fi
+
+( ${DRYRUN} ) && printf "\n"
 
 for FILE in *; do
 	if ls -1d ${BLACKLIST_ENTRIES[@]} 2> /dev/null | grep -qe "${FILE}"; then
@@ -159,7 +174,8 @@ for FILE in *; do
 	else
 		( ${INTERACTIVE} ) && ! yesno "Sort file '${FILE}' (y/n)? " && continue
 		createDirectoryStructure ${FILE} || continue
-		[[ ${VERBOSE} -ge 2 ]] && printf "[INFO] Moving '${FILE}' into '${FOLDER_NAME}'\n"
+		( ${DRYRUN} ) && printf "\tWould move '${FILE}' into './${FOLDER_NAME}'\n" && continue
+		[[ ${VERBOSE} -ge 2 ]] && printf "[INFO] Moving '${FILE}' into './${FOLDER_NAME}'\n"
 		mv ${FILE} ${FOLDER_NAME} || { printf "[ERROR]\tCouldn't move '${FILE}' into '${FOLDER_NAME}'\n"; continue; }
 		MOVED_LIST=( "${MOVED_LIST[@]}" "${FILE}" )
 	fi
