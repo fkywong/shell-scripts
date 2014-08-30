@@ -8,7 +8,8 @@ Felix Wong <fwong@palantir.com>
 
 Description
 ===
-Easily mounts USB partitions when using window managers as opposed to desktop environments
+A user-friendly way to mount USB partitions when using window managers as opposed to desktop environments  
+When specifying a mounted USB partition, it provides an easy way to unmount it and clean up the mount point
 
 Usage
 ===
@@ -18,10 +19,10 @@ Usage
 
 	Displays the help message
 
-USB_PARTITION
+USB\_PARTITION
 
 * USB mount partition
 
-MOUNT_POINT
+MOUNT\_POINT
 
 * Optional mount point
