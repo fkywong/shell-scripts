@@ -78,9 +78,12 @@ function setupJava() {
 
 		set -f
 		SLAVE_LOCATION=$( find ${JAVA_DIR} -type f -path "${JAVA_DIR}/man/man1/${ALT}.1*" )
-		SLAVE_NAME=$( find ${JAVA_DIR} -type f -path "${JAVA_DIR}/man/man1/${ALT}.1*" -exec basename '{}' \; )
+#		SLAVE_NAME=$( find ${JAVA_DIR} -type f -path "${JAVA_DIR}/man/man1/${ALT}.1*" -exec basename '{}' \; )
+#		SLAVE_NAME=$( find /usr/share/man/man1 -name "${ALT}.1*" -exec basename '{}' \; )
+#		SLAVE_NAME=${SLAVE_NAME:=$( basename "${SLAVE_LOCATION}" ).gz}
 		SLAVE_LINK=$( find /usr/share/man/man1 -name "${ALT}.1*" )
 		SLAVE_LINK=${SLAVE_LINK:=/usr/share/man/man1/$( basename "${SLAVE_LOCATION}" ).gz}
+		SLAVE_NAME=$( basename "${SLAVE_LINK}" )
 		set +f
 
 		[[ ${VERBOSE} -ge 2 ]] && printf "\n\t\tNew slave name: ${SLAVE_NAME}\n\t\tNew slave path: ${SLAVE_LOCATION}\n\t\tNew link: ${SLAVE_LINK}\n"
@@ -158,6 +161,11 @@ function installJava() {
 	done
 
 	printf "\n"
+	if [[ ${FORCE} == true && ${RETURN_CODE} -eq 0 ]]; then
+		printf "Remember to re-add certs:\n"
+		printf "\tkeytool -importcert -keystore ${JAVA_DIR}/jre/lib/security/cacerts"
+		printf " -alias ALIAS_NAME -file PATH_TO_CERT -storepass 'changeit'\n"
+	fi
 	return ${RETURN_CODE}
 }
 
