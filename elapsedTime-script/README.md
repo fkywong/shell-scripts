@@ -25,13 +25,14 @@ TIME\_A and TIME\_B follows the following format:
 * Loose regex pattern `(#[s|m|h|d|w] )+` where s=seconds, m=minutes, h=hours, d=days, w=weeks
   * Examples
     * '90s 1w 46h 9d 89m'
-    * '66 4wks 22dy 127minutes' (Non-units will be parsed to seconds)
-    * '260'
+    * '66 4wks 22dy 127minutes'
+    * '260' (Non-units will be parsed to seconds)
 * Date formats acceptable with the GNU date command
   * Examples
     * '2014-03-02 18:22:23'
     * '19:56:39 14-03-06'
-  * Bad example
+	 * '05:22:34'
+  * Bad format
     * '03-02-2014 18:22:23'
 
 Notes
