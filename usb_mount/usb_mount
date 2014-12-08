@@ -2,14 +2,26 @@
 
 UNDERLINE=$( tput smul )
 NOUNDERLINE=$( tput rmul )
-[[ ${1} =~ ^--h? ]] && printf "Usage: $( basename ${0} ) ${UNDERLINE}USB_PARTITION${NOUNDERLINE} [${UNDERLINE}MOUNT_POINT${NOUNDERLINE}]\n" && exit 0
+
+function getHelp() {
+	printf "Usage:\t$( basename ${0} ) ${UNDERLINE}USB_PARTITION${NOUNDERLINE} [${UNDERLINE}MOUNT_POINT${NOUNDERLINE}]\n"
+	printf "\tIf USB_PARTITION is already mounted, then it will provide an option to unmount\n"
+}
 
 function error() {
 	printf "[ERROR]\t${@}\n\nRefusing to continue...\n" >&2
 	exit 1
 }
 
-function yesno(){
+function warn() {
+	printf "[WARN]\t${@}\n"
+}
+
+function info() {
+	printf "[INFO]\t${@}\n"
+}
+
+function yesno() {
 	printf "${@}"
 	while read -sn 1 LINE_IN; do
 		case ${LINE_IN} in
@@ -20,46 +32,57 @@ function yesno(){
 	done
 }
 
+# This function checks for a valid first argument
+function firstArgCheck() {
+	if [[ "${SRC_PT}" =~ ^/dev/sd[a-z]+[0-9]+$ ]]; then
+		if sudo blkid ${SRC_PT} &> /dev/null; then
+			DEST=$( lsblk -n -o MOUNTPOINT ${SRC_PT} )
+			if [[ ! -z "${DEST}" ]]; then
+				printf "[WARN]\tPartition '${SRC_PT}' is already mounted at '${DEST}'!\n" >&2
+				yesno "Would you like to dismount the partition instead (y/n)? " || exit 0
+				sudo umount ${DEST}
+				if [[ ${?} -eq 0 ]]; then
+					info "Successfully unmounted '${SRC_PT}'"
+					yesno "Would you like to remove directory '${DEST}' (y/n)? " || exit 0
+					sudo rmdir ${DEST}
+					if [[ ${?} -eq 0 ]]; then
+						info "Successfully removed folder '${DEST}'"
+						exit 0
+					else
+						error "Unable to remove folder '${DEST}'"
+					fi
+				else
+					error "Unable to unmount '${SRC_PT}'"
+				fi
+			else
+				:
+			fi
+		else
+			error "Partition '${SRC_PT}' doesn't exist!"
+		fi
+	elif [[ "${SRC_PT}" =~ ^sd[a-z]+[0-9]?$ ]]; then
+		warn "'/dev/' prefix is missing from argument; assuming you meant /dev/${SRC_PT}"
+		SRC_PT=/dev/${SRC_PT}
+		firstArgCheck
+	elif [[ "${SRC_PT}" =~ ^/dev/sd[a-z]+$ ]]; then
+		error "No partition was specified for source device '${SRC_PT}'"
+	else
+		error "Invalid source disk '${SRC_PT}' (not a Linux disk, e.g. /dev/sdb)"
+	fi
+}
+
+[[ ${1} =~ ^-+h? ]] && getHelp  && exit 0
+
 # This section does general checks
 [[ "$( sudo whoami )" != root ]] && error "Insufficient privileges!"
 ! which blkid lsblk mktemp &> /dev/null && error "Tools 'blkid', 'lsblk', and/or 'mktemp' not found"
 [[ ${#} -gt 2 ]] && error "Invalid number of arguments\n\nUsage:\t${0} SOURCE_DEVICE [MOUNT_POINT]"
-[[ ${#} -lt 1 ]] && printf "No source disk specified!\nChoose one from the table below:\n\n" && lsblk -o NAME,SIZE | awk '{ print "\t"$0; }' && exit 0
+[[ ${#} -lt 1 ]] && printf "No source disk specified!\nChoose one from the table below or re-run w/ the '--help' flag:\n\n" \
+	&& lsblk -o NAME,SIZE,MOUNTPOINT | awk '{ print "\t"$0; }' && exit 0
 SRC_PT=$( echo "${1}" | sed 's;/$;;')
 MNT_PT=${2}
 
-# This section checks for a valid first argument
-if [[ "${SRC_PT}" =~ ^/dev/sd[a-z]+[0-9]+$ ]]; then
-	if sudo blkid ${SRC_PT} &> /dev/null; then
-		DEST=$( lsblk -n -o MOUNTPOINT ${SRC_PT} )
-		if [[ ! -z "${DEST}" ]]; then
-			printf "[WARN]\tPartition '${SRC_PT}' is already mounted at '${DEST}'!\n" >&2
-			yesno "Would you like to dismount the partition instead (y/n)? " || exit 0
-			sudo umount ${DEST}
-			if [[ ${?} -eq 0 ]]; then
-				printf "[INFO]\tSuccessfully unmounted '${SRC_PT}'\n"
-				yesno "Would you like to remove directory '${DEST}' (y/n)? " || exit 0
-				sudo rmdir ${DEST}
-				if [[ ${?} -eq 0 ]]; then
-					printf "[INFO]\tSuccessfully removed folder '${DEST}'\n"
-					exit 0
-				else
-					error "Unable to remove folder '${DEST}'"
-				fi
-			else
-				error "Unable to unmount '${SRC_PT}'"
-			fi
-		else
-			:
-		fi
-	else
-		error "Partition '${SRC_PT}' doesn't exist!"
-	fi
-elif [[ "${SRC_PT}" =~ ^/dev/sd[a-z]+$ ]]; then
-	error "No partition was specified for source device '${SRC_PT}'"
-else
-	error "Invalid source disk '${SRC_PT}' (not a Linux disk, e.g. /dev/sdb)"
-fi
+firstArgCheck
 
 # This section checks/sets a valid second argument
 if [[ -z "${MNT_PT}" ]]; then
@@ -85,7 +108,7 @@ esac
 
 eval ${COMMAND}
 if [[ ${?} -eq 0 ]]; then
-	printf "[INFO]\t'${SRC_PT}' successfully mounted at '${MNT_PT}'\n"
+	info "'${SRC_PT}' successfully mounted at '${MNT_PT}'\n"
 	exit 0
 else
 	printf "[FAIL]\tMounting failed with the command \`${CMD}'.\n" >&2
