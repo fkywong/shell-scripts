@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cd $( dirname ${0} )
+for FOLDER in $( find ${PWD} -maxdepth 1 -type d -not -path ${PWD} ); do
+	if [[ -e "${FOLDER}/.git" ]]; then
+		cd ${FOLDER} || continue
+		pwd && printf "\n"
+		git ls-remote --get-url 2>&1 | awk '{ print "\t"$0; }'
+		cd ${OLDPWD} && printf "\n"
+	else
+		continue
+	fi
+done
