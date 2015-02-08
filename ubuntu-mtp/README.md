@@ -28,3 +28,7 @@ binaries from later versions of Ubuntu to make mounting happen successfully via 
   * This should be done with at least one device connected; otherwise it's not very interesting  
   * This is done on a per-device level with prompts to skip certain devices or steps  
 * Set up multiple connected devices automatically (`-y` flag)  
+
+# Credit
+
+Steps were taken from this guide: http://bernaerts.dyndns.org/linux/74-ubuntu/268-ubuntu-automount-any-mtp-device
