@@ -5,7 +5,7 @@ for FOLDER in $( find ${PWD} -maxdepth 1 -type d -not -path ${PWD} ); do
 	if [[ -e "${FOLDER}/.git" ]]; then
 		cd ${FOLDER} || continue
 		pwd && printf "\n"
-		git status 2>&1 | awk '{ print "\t"$0; }'
+		git status -s 2>&1 | awk '{ print "\t"$0; }'
 		cd ${OLDPWD} && printf "\n"
 	else
 		continue
