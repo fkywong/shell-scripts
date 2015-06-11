@@ -4,10 +4,10 @@ cd $( dirname ${0} )
 for FOLDER in $( find ${PWD} -maxdepth 1 -type d -not -path ${PWD} ); do
 	if [[ -e "${FOLDER}/.git" ]]; then
 		cd ${FOLDER} || continue
-		STATUS=$( git status -s 2>&1 )
-		[[ "${STATUS}" != '' ]] || continue
+		GIT_STATUS=$( git status -sb 2>&1 )
+		( grep -qP 'ahead \d+' <<<"${GIT_STATUS}" || [[ $( wc -l <<<"${GIT_STATUS}" ) -ge 2 ]] ) || continue
 		pwd
-		echo "${STATUS}" | awk '{ print "\t"$0; }'
+		awk '{ print "\t"$0; }' <<<"${GIT_STATUS}"
 	else
 		continue
 	fi
