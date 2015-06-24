@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ "$( uname -s )" == "Darwin" ] && grep -V | grep -q 'BSD'; then
+	function grep(){
+		ggrep "${@}"
+	}
+fi
+
 cd $( dirname ${0} )
 for FOLDER in $( find ${PWD} -maxdepth 1 -type d -not -path ${PWD} ); do
 	if [[ -e "${FOLDER}/.git" ]]; then
