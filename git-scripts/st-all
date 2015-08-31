@@ -11,9 +11,10 @@ for FOLDER in $( find ${PWD} -maxdepth 1 -type d -not -path ${PWD} ); do
 	if [[ -e "${FOLDER}/.git" ]]; then
 		cd ${FOLDER} || continue
 		GIT_STATUS=$( git status -sb 2>&1 )
-		( grep -qP 'ahead \d+' <<<"${GIT_STATUS}" || [[ $( wc -l <<<"${GIT_STATUS}" ) -ge 2 ]] ) || continue
+		grep -qP 'ahead \d+' <<<"${GIT_STATUS}" || [[ $( wc -l <<<"${GIT_STATUS}" ) -ge 2 ]]
+    NOTE=${?}
 		pwd
-		awk '{ print "\t"$0; }' <<<"${GIT_STATUS}"
+		awk -v B=$( tput smso) -v N=$( tput rmso ) -v X=${NOTE} '{ if (X == 0) {print B"\t"$0N} else {print "\t"$0}; }' <<<"${GIT_STATUS}"
 	else
 		continue
 	fi
