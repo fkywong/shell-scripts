@@ -1,21 +1,25 @@
 #!/bin/bash
 
 if [ "$( uname -s )" == "Darwin" ] && grep -V | grep -q 'BSD'; then
-	function grep(){
-		ggrep "${@}"
-	}
+  function grep(){
+    ggrep "${@}"
+  }
 fi
 
 cd $( dirname ${0} )
 for FOLDER in $( find ${PWD} -maxdepth 1 -type d -not -path ${PWD} ); do
-	if [[ -e "${FOLDER}/.git" ]]; then
-		cd ${FOLDER} || continue
-		OUTPUT=$( git pull 2>&1 )
-		grep -qP '^(Current branch [-[:graph:]]+ is)|(Already) up[ -]to[ -]date.$' <<<"${OUTPUT}"
-    NOTE=${?}
-		pwd
-		echo "${OUTPUT}" | awk -v B=$( tput smso) -v N=$( tput rmso ) -v X=${NOTE} '{ if (X != 0) {print B"\t"$0N} else {print "\t"$0}; }'
-	else
-		continue
-	fi
+  if [[ -e "${FOLDER}/.git" ]]; then
+    cd ${FOLDER} || continue
+    OUTPUT=$( git pull 2>&1 )
+    grep -qP '^(Current branch [-[:graph:]]+ is)|(Already) up[ -]to[ -]date.$' <<<"${OUTPUT}"
+    if [[ ${?} -ne 0 || $( wc -l <<<"${OUTPUT}" ) -gt 1 ]]; then
+      NOTE=1
+    else
+      NOTE=0
+    fi
+    pwd
+    echo "${OUTPUT}" | awk -v B=$( tput smso) -v N=$( tput rmso ) -v X=${NOTE} '{ if (X != 0) {print B"\t"$0N} else {print "\t"$0}; }'
+  else
+    continue
+  fi
 done
