@@ -1,6 +1,9 @@
 #!/bin/bash
 
-cd $( dirname ${0} )
+if [[ -n "${1}" && -d "${1}" ]]; then
+    cd ${1}
+fi
+
 for FOLDER in $( find ${PWD} -maxdepth 1 -type d -not -path ${PWD} ); do
 	if [[ -e "${FOLDER}/.git" ]]; then
 		cd ${FOLDER} || continue
