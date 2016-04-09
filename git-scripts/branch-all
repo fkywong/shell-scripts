@@ -1,0 +1,5 @@
+#!/bin/bash
+
+GIT_CMD="git -c color.branch=always branch -l"
+
+source $( ! [[ $( readlink ${0} ) =~ ^/.* ]] && dirname ${0} )/$( [[ -n $( readlink ${0} ) ]] && dirname $( readlink ${0} ) )/generic-all
