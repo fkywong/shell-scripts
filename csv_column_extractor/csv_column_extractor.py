@@ -33,7 +33,7 @@ def __main():
                         col_widths[i] = len(v)
             csv_file.seek(0)
             for row in csv.reader(csv_file):
-                fmt = "  \u2503  ".join("{{:{}}}".format(col_widths[i]) for i in range(len(col_widths)))
+                fmt = "  \u2503  ".join("{{:<{}}}".format(col_widths[i]) for i in range(len(col_widths)))
                 print(fmt.format(*list(itertools.chain.from_iterable(row[col] if isinstance(row[col], list)
                         else itertools.repeat(row[col], 1) for col in cols_to_get))))
     else:
