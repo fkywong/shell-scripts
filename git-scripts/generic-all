@@ -1,7 +1,8 @@
 #!/bin/bash
 
-set -euo pipefail
+set -eo pipefail
 COLOR_CONDITIONAL=${COLOR_CONDITIONAL%;}
+set -u
 for SINGLE_PATH in "${@:-.}"; do
   find ${SINGLE_PATH} -maxdepth 1 -type d -not -path "${SINGLE_PATH}" -not -path "${SINGLE_PATH}/\.*" |
     xargs -L 1 bash -euo pipefail -c "[[ ! -d \"\${0}/.git\" ]] && exit 0;
