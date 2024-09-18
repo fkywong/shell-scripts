@@ -25,11 +25,15 @@ function convert_numeric_to_hex_representation() {
     printf "%s" ${1} | xxd -p | tr -d '\n'
 }
 
+function format_hex_representation() {
+    printf "%s" ${1} | fold -w2 | tr '\n' ' '
+}
+
 function try_delete_with_access_code() {
     input_as_hex=$( convert_numeric_to_hex_representation ${1} )
     $YKMAN_BINARY otp --access-code ${input_as_hex} delete 1 -f &> /dev/null
     local exit_code=$?
-    LAST_PROCESSED_ACCESS_CODE="${1} => $( echo ${input_as_hex} | fold -w2 | tr '\n' ' ' )"
+    LAST_PROCESSED_ACCESS_CODE="${1} => $( format_hex_representation ${input_as_hex} )"
     if [[ exit_code -eq 0 ]]; then
         printf "found access code: %s\n" "${LAST_PROCESSED_ACCESS_CODE}"
         exit 0
