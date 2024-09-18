@@ -47,7 +47,11 @@ function trap_sigint() {
 
 check_binary
 trap 'trap_sigint' SIGINT
-for potential_pin in $( seq -w 0 999999 ); do
+START_SEQUENCE=${1:=0}
+if [[ ${START_SEQUENCE} -gt 0 ]]; then
+    printf "Starting from PIN %s (%s)\n" ${START_SEQUENCE} "$( format_hex_representation $( convert_numeric_to_hex_representation ${1} ) )"
+fi
+for potential_pin in $( seq -w ${START_SEQUENCE} 999999 ); do
     if ! should_skip ${potential_pin}; then
         try_delete_with_access_code ${potential_pin}
     fi
