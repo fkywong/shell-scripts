@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-YKMAN_BINARY="/Applications/YubiKey Manager.app/Contents/MacOS/ykman"
+YKMAN_BINARY="/opt/homebrew/bin/ykman"
 LAST_PROCESSED_ACCESS_CODE=
 
 function check_binary() {
