@@ -2,6 +2,7 @@
 
 YKMAN_BINARY="/opt/homebrew/bin/ykman"
 LAST_PROCESSED_ACCESS_CODE=
+COUNTER=0
 
 function check_binary() {
     if ! [[ -x ${YKMAN_BINARY} ]]; then
@@ -34,6 +35,7 @@ function try_delete_with_access_code() {
     $YKMAN_BINARY otp --access-code ${input_as_hex} delete 1 -f &> /dev/null
     local exit_code=$?
     LAST_PROCESSED_ACCESS_CODE="${1} => $( format_hex_representation ${input_as_hex} )"
+    (( COUNTER++ ))
     if [[ exit_code -eq 0 ]]; then
         printf "found access code: %s\n" "${LAST_PROCESSED_ACCESS_CODE}"
         exit 0
@@ -41,7 +43,8 @@ function try_delete_with_access_code() {
 }
 
 function trap_sigint() {
-    printf "\rSIGINT caught!\nLast access code processed: %s\n" "${LAST_PROCESSED_ACCESS_CODE}"
+    printf "\rSIGINT caught! (Tried %d access codes)\n" ${COUNTER}
+    printf "Last access code processed: %s\n" "${LAST_PROCESSED_ACCESS_CODE}"
     exit 127
 }
 
